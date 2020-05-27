@@ -158,9 +158,10 @@ func TestQueryLogOffsetLimit(t *testing.T) {
 
 func TestQueryLogMaxFileScanEntries(t *testing.T) {
 	conf := Config{
-		Enabled:  true,
-		Interval: 1,
-		MemSize:  100,
+		Enabled:     true,
+		FileEnabled: true,
+		Interval:    1,
+		MemSize:     100,
 	}
 	conf.BaseDir = prepareTestDir()
 	defer func() { _ = os.RemoveAll(conf.BaseDir) }()
