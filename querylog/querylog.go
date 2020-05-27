@@ -25,8 +25,8 @@ type QueryLog interface {
 
 // Config - configuration object
 type Config struct {
-	Enabled           bool
-	FileEnabled       bool
+	Enabled           bool   // enable the module
+	FileEnabled       bool   // write logs to file
 	BaseDir           string // directory where log file is stored
 	Interval          uint32 // interval to rotate logs (in days)
 	MemSize           uint32 // number of entries kept in memory before they are flushed to disk

@@ -149,7 +149,14 @@ func (l *queryLog) Add(params AddParams) {
 	l.bufferLock.Lock()
 	l.buffer = append(l.buffer, &entry)
 	needFlush := false
-	if !l.flushPending {
+
+	if !l.conf.FileEnabled {
+		if len(l.buffer) > int(l.conf.MemSize) {
+			// writing to file is disabled - just remove the oldest entry from array
+			l.buffer = l.buffer[1:]
+		}
+
+	} else if !l.flushPending {
 		needFlush = len(l.buffer) >= int(l.conf.MemSize)
 		if needFlush {
 			l.flushPending = true
@@ -159,8 +166,8 @@ func (l *queryLog) Add(params AddParams) {
 
 	// if buffer needs to be flushed to disk, do it now
 	if needFlush {
-		// write to file
-		// do it in separate goroutine -- we are stalling DNS response this whole time
-		go l.flushLogBuffer(false) // nolint
+		go func() {
+			_ = l.flushLogBuffer(false)
+		}()
 	}
 }
