@@ -73,11 +73,8 @@ func checkInterval(days uint32) bool {
 	return days == 1 || days == 7 || days == 30 || days == 90
 }
 
-func (l *queryLog) WriteDiskConfig(dc *DiskConfig) {
-	dc.Enabled = l.conf.Enabled
-	dc.Interval = l.conf.Interval
-	dc.MemSize = l.conf.MemSize
-	dc.AnonymizeClientIP = l.conf.AnonymizeClientIP
+func (l *queryLog) WriteDiskConfig(c *Config) {
+	*c = *l.conf
 }
 
 // Clear memory buffer and remove log files
