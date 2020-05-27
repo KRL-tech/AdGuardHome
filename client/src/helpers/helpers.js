@@ -26,7 +26,7 @@ import {
     DEFAULT_LANGUAGE,
     FILTERED_STATUS,
     FILTERED,
-    BLOCKED_CLIENT,
+    IP_MATCH_LIST_STATUS,
 } from './constants';
 
 /**
@@ -501,7 +501,7 @@ export const normalizeMultiline = (multiline) => `${normalizeTextarea(multiline)
  * @param cidr {string}
  * @returns {boolean}
  */
-export const isIpInCidr = (ip, cidr) => {
+export const isIpMatchCidr = (ip, cidr) => {
     try {
         const [cidrIp] = cidr.split('/');
         const cidrIpVersion = ipaddr.parse(cidrIp)
@@ -519,24 +519,30 @@ export const isIpInCidr = (ip, cidr) => {
 };
 
 /**
- * @param rawClients {string}
- * @param currentClient {string}
- * @returns {boolean | 'CIDR' | 'IP'}
+ * @param ip {string}
+ * @param list {string}
+ * @returns {'EXACT' | 'CIDR' | 'NOT_FOND'}
  */
-export const isClientInIpsOrCidrs = (rawClients, currentClient) => rawClients.split('\n')
-    .reduce((isClientInList, rawClient) => {
-        if (isClientInList) {
-            return isClientInList;
-        }
+export const getIpMatchListStatus = (ip, list) => {
+    if (!ip || !list) {
+        return IP_MATCH_LIST_STATUS.NOT_FOUND;
+    }
 
-        if (rawClient === currentClient) {
-            return BLOCKED_CLIENT.IP;
-        }
+    return list.split('\n')
+        .reduce((ipMatchList, listItem) => {
+            if (ipMatchList !== IP_MATCH_LIST_STATUS.NOT_FOUND) {
+                return ipMatchList;
+            }
 
-        if (rawClient.includes('/') && isIpInCidr(currentClient, rawClient)) {
-            return BLOCKED_CLIENT.CIDR;
-        }
+            if (listItem === ip) {
+                return IP_MATCH_LIST_STATUS.EXACT;
+            }
 
-        return false;
-    },
-    false);
+            if (listItem.includes('/') && isIpMatchCidr(ip, listItem)) {
+                return IP_MATCH_LIST_STATUS.CIDR;
+            }
+
+            return IP_MATCH_LIST_STATUS.NOT_FOUND;
+        },
+        IP_MATCH_LIST_STATUS.NOT_FOUND);
+};
