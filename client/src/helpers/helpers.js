@@ -11,6 +11,7 @@ import round from 'lodash/round';
 import axios from 'axios';
 import i18n from 'i18next';
 import uniqBy from 'lodash/uniqBy';
+import ipaddr from 'ipaddr.js';
 import versionCompare from './versionCompare';
 
 import {
@@ -494,22 +495,27 @@ export const normalizeMultiline = (multiline) => `${normalizeTextarea(multiline)
     .map((line) => line.trim())
     .join('\n')}\n`;
 
-/**
- * @param ip {string}
- * @returns {number}
- */
-export const ipToInt = (ip) => ip.split('.')
-    .reduce((int, oct) => (int << 8) + parseInt(oct, 10), 0) >>> 0;
 
 /**
- * @param cidr {string}
  * @param ip {string}
+ * @param cidr {string}
  * @returns {boolean}
  */
-export const isIpInCidr = (cidr, ip) => {
-    const [range, bits = 32] = cidr.split('/');
-    const mask = ~((2 ** (32 - bits)) - 1);
-    return (ipToInt(ip) & mask) === (ipToInt(range) & mask);
+export const isIpInCidr = (ip, cidr) => {
+    try {
+        const [cidrIp] = cidr.split('/');
+        const cidrIpVersion = ipaddr.parse(cidrIp)
+            .kind();
+
+        const parsedIp = ipaddr.parse(ip);
+        const ipVersion = parsedIp.kind();
+
+        const parsedCidr = ipaddr.parseCIDR(cidr);
+
+        return ipVersion === cidrIpVersion && parsedIp.match(parsedCidr);
+    } catch (e) {
+        return false;
+    }
 };
 
 /**
@@ -518,15 +524,19 @@ export const isIpInCidr = (cidr, ip) => {
  * @returns {boolean | 'CIDR' | 'IP'}
  */
 export const isClientInIpsOrCidrs = (rawClients, currentClient) => rawClients.split('\n')
-    .reduce((acc, curr) => {
-        if (acc) {
-            return acc;
+    .reduce((isClientInList, rawClient) => {
+        if (isClientInList) {
+            return isClientInList;
         }
-        if (curr.includes('/') && isIpInCidr(curr, currentClient)) {
-            return BLOCKED_CLIENT.CIDR;
-        }
-        if (curr === currentClient) {
+
+        if (rawClient === currentClient) {
             return BLOCKED_CLIENT.IP;
         }
+
+        if (rawClient.includes('/') && isIpInCidr(currentClient, rawClient)) {
+            return BLOCKED_CLIENT.CIDR;
+        }
+
         return false;
-    }, false);
+    },
+    false);
